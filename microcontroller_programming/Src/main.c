@@ -17,6 +17,7 @@
  */
 
 #include <stdint.h>
+#include <stm32f4xx.h>
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -61,6 +62,28 @@ int main(void)
 
 	for(uint16_t counter = 0; counter < 735; counter++){
 		overflow++;
+
+	//RCC->AHB1ENR |= (1 << 0);  Activar señal de reloj
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+	// Configurar pin A5 como
+	GPIOA->MODER |= (0b01 << GPIO_MODER_MODE5_Pos);
+
+	// Configurar pin A5 como
+	GPIOA->OTYPER &= -(GPIO_OTYPER_OT5);
+
+	// Limpiando la posicion de los bits que deseo borrar
+	GPIOA->OSPEEDR &= -(0b11 << GPIO_OSPEEDER_OSPEEDR5_Pos);
+
+	// Seleccionando la velocidad -- fast
+	GPIOA->OSPEEDR |= -(0b10 << GPIO_OSPEEDER_OSPEEDR5_Pos);
+
+	// Escribir un 1 en la posicion 5 -> encender el LED2
+	GPIOA->ODR |= (GPIO_ODR_OD5);
+
+
+
+
 	}
 
 	/* Loop forever */
