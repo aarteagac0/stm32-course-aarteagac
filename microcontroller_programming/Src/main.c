@@ -128,22 +128,33 @@
 
 
 //Definicion de variables
-uint8_t led_ok = 0;
-uint8_t cambio = 0;
+volatile led_ok = 0;
+volatile cambio = 0;
+volatile uint8_t aumentar_counter = 0;
+uint8_t counter = 0;
 uint8_t color = 0; // 0 verde, 1 amarillo y 2 rojo
 
 
 
 //Cabeceras de funciones
 void init_GPIO(void);
+void init_exti(void);
 
 
 int main(void){
 	init_GPIO();
+	init_exti();
 
 
 
 	while(1){
+		if (aumentar_counter){
+			counter = counter + 10;
+			aumentar_counter = 0;
+		}
+
+
+
 		if(led_ok){
 			led_ok = 0;
 			GPIOA->ODR ^= GPIO_ODR_OD5;
@@ -264,6 +275,30 @@ void init_GPIO(void){
 
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
+
+
+//Configurando el EXTI
+void init_exti(void){
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;  //Encendiendo señal de reloj para el EXTI
+
+	SYSCFG->EXTICR[0] &= ~(SYSCFG_EXTICR1_EXTI1); //Configurando canal EXTI
+	SYSCFG->EXTICR[0] |= (SYSCFG_EXTICR1_EXTI1_PC); //Configurando el canal 1 del EXTI para el puerto C (pin C1)
+	EXTI->RTSR |= EXTI_RTSR_TR1; //Seleccionando flanco de subida para ser detectado por pin C1
+	NVIC_EnableIRQ(EXTI1_IRQn); //Matriculando la interrupcion del EXTI en el NVIC (para que sea atendida)
+	EXTI->PR |= EXTI_PR_PR1; //Bajando la bandera de la interrupcion
+	EXTI->IMR |= EXTI_IMR_IM1; //Activando la interrupcion
+
+}
+
+//ISR para el EXTI con flanco de subida
+void EXTI1_IRQHandler(void){
+	if (EXTI->PR && EXTI_PR_PR1){ //Verificando que se dio la interrupcion en C1
+		EXTI->PR |= EXTI_PR_PR1; //Bajamos la bandera de la interrupcion
+		aumentar_counter = 1;
+	}
+}
+
+
 
 
 void TIM2_IRQHandler(void){
